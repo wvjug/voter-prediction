@@ -1,0 +1,526 @@
+---
+title: "Media consumption on Voter Turnout"
+date: "December 13, 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+### Team Members  
+* Ernesto Ye Luo 
+* Patrick Wolff
+* Wisly Juganda 
+
+## Problem Statement
+
+One important question that a political campaign faces is "how can we cost effectively get more people to vote for us?" That is, how can one get more people to vote for them in a manner that is effective and, at the same time, resourceful? Effective as in a strategy that appeals to the most amount of people as possible so as to vote for them. Resourceful as in a strategy with the least amount of cost as possible.  To address these two-parts of the question, we analyzed data from the 2016 U.S. election.  By solely using the context of the 2016 U.S. election data to approach the question, we have essentially reduced the scope of the problem under two fundamental assumptions: 
+
+1) For a strategy to be effective, a political campaign should focus on available data that indicate which means have generally helped political campaigns convince the most amount of people in the past.  In the case of the 2016 U.S. election data, the only available data for the means that political campaign can use is media consumption.
+
+2) For a strategy to be resourceful, a political campaign should focus on reaching out to people who will not vote because they are easier to convince than people who will vote.  
+
+Thus, the focus of our project is two-fold: 1) figuring out which media consumption is the most significant in getting people to vote  2) building a prediction model of those who will not vote.
+
+By figuring out which media consumption is most effective in convincing the most amount of people to vote, political campaigns could benefit in using more of that particular media consumption.  And, by building a model to predict those who will not vote, political campaigns could benefit by specifically targeting them.  
+
+
+## Data Description
+
+The dataset was taken from a large-scale interview study from the American National Election Study (ANES). The initial dataset consists of 3,649 observations and 204 variables. It was sampled using Stratified Probability sampling to improve how well it represents the US population. The types of variables includes voting behavior, political involvement, political alignment, media consumption and demographics. The output variable is a 2-level factor indicating whether an individual voted in the 2016 presidential elections.  
+
+For the purposes of this study, we only accounted for predictor variables relating to media consumption. The data analyzed in this study is a subset of the 11 media-related predictor variables and the output variable.
+
+## Data Preprocessing
+
+### 1. Loading the data and required libraries
+```{r}
+load("36853-0001-Data.rda")
+
+library(caret)
+
+library(prettyR)
+
+library(ggplot2)
+
+```
+
+### 2. Converting variables from factor to numeric
+
+```{r}
+factor_to_numeric <- function(x){
+  require(prettyR)
+  lbls <- sort(levels(x))
+  lbls <- (sub("^\\([0-9]+\\) +(.+$)", "\\1", lbls))
+  out.x <- as.numeric(sub("^\\(0*([0-9]+)\\).+$", "\\1", x))
+  out.x <- add.value.labels(out.x, lbls)
+  out.x
+}
+
+names(da36853.0001)
+
+da36853.0001$A01 <- factor_to_numeric(da36853.0001$A01)
+da36853.0001$A02 <- factor_to_numeric(da36853.0001$A02)
+da36853.0001$A03 <- factor_to_numeric(da36853.0001$A03)
+da36853.0001$A04 <- factor_to_numeric(da36853.0001$A04)
+da36853.0001$A05 <- factor_to_numeric(da36853.0001$A05)
+da36853.0001$A06 <- factor_to_numeric(da36853.0001$A06)
+da36853.0001$A07 <- factor_to_numeric(da36853.0001$A07)
+da36853.0001$A08 <- factor_to_numeric(da36853.0001$A08)
+da36853.0001$A09 <- factor_to_numeric(da36853.0001$A09)
+da36853.0001$A10 <- factor_to_numeric(da36853.0001$A10)
+da36853.0001$A11 <- factor_to_numeric(da36853.0001$A11)
+
+da36853.0001$B01 <- factor_to_numeric(da36853.0001$B01)
+da36853.0001$B02 <- factor_to_numeric(da36853.0001$B02)
+da36853.0001$B03 <- factor_to_numeric(da36853.0001$B03)
+da36853.0001$B04 <- factor_to_numeric(da36853.0001$B04)
+da36853.0001$B05 <- factor_to_numeric(da36853.0001$B05)
+da36853.0001$B06 <- factor_to_numeric(da36853.0001$B06)
+da36853.0001$B07 <- factor_to_numeric(da36853.0001$B07)
+
+da36853.0001$C01 <- factor_to_numeric(da36853.0001$C01)
+da36853.0001$C02 <- factor_to_numeric(da36853.0001$C02)
+da36853.0001$C03 <- factor_to_numeric(da36853.0001$C03)
+da36853.0001$C04 <- factor_to_numeric(da36853.0001$C04)
+da36853.0001$C05 <- factor_to_numeric(da36853.0001$C05)
+da36853.0001$C06 <- factor_to_numeric(da36853.0001$C06)
+da36853.0001$C07 <- factor_to_numeric(da36853.0001$C07)
+da36853.0001$C08 <- factor_to_numeric(da36853.0001$C08)
+da36853.0001$C09 <- factor_to_numeric(da36853.0001$C09)
+da36853.0001$C10 <- factor_to_numeric(da36853.0001$C10)
+da36853.0001$C11 <- factor_to_numeric(da36853.0001$C11)
+
+da36853.0001$D01 <- factor_to_numeric(da36853.0001$D01)
+da36853.0001$D02 <- factor_to_numeric(da36853.0001$D02)
+da36853.0001$D03 <- factor_to_numeric(da36853.0001$D03)
+da36853.0001$D04 <- factor_to_numeric(da36853.0001$D04)
+da36853.0001$D05 <- factor_to_numeric(da36853.0001$D05)
+da36853.0001$D06 <- factor_to_numeric(da36853.0001$D06)
+da36853.0001$D07 <- factor_to_numeric(da36853.0001$D07)
+da36853.0001$D08 <- factor_to_numeric(da36853.0001$D08)
+da36853.0001$D09 <- factor_to_numeric(da36853.0001$D09)
+da36853.0001$D10 <- factor_to_numeric(da36853.0001$D10)
+da36853.0001$D11 <- factor_to_numeric(da36853.0001$D11)
+da36853.0001$D12 <- factor_to_numeric(da36853.0001$D12)
+da36853.0001$D13 <- factor_to_numeric(da36853.0001$D13)
+da36853.0001$D14 <- factor_to_numeric(da36853.0001$D14)
+da36853.0001$D15 <- factor_to_numeric(da36853.0001$D15)
+da36853.0001$D16 <- factor_to_numeric(da36853.0001$D16)
+da36853.0001$D17 <- factor_to_numeric(da36853.0001$D17)
+da36853.0001$D18 <- factor_to_numeric(da36853.0001$D18)
+da36853.0001$D19 <- factor_to_numeric(da36853.0001$D19)
+da36853.0001$D20 <- factor_to_numeric(da36853.0001$D20)
+da36853.0001$D21 <- factor_to_numeric(da36853.0001$D21)
+da36853.0001$D22 <- factor_to_numeric(da36853.0001$D22)
+da36853.0001$D23 <- factor_to_numeric(da36853.0001$D23)
+da36853.0001$D24 <- factor_to_numeric(da36853.0001$D24)
+da36853.0001$D25 <- factor_to_numeric(da36853.0001$D25)
+da36853.0001$D26 <- factor_to_numeric(da36853.0001$D26)
+
+da36853.0001$E01 <- factor_to_numeric(da36853.0001$E01)
+da36853.0001$E02 <- factor_to_numeric(da36853.0001$E02)
+da36853.0001$E03 <- factor_to_numeric(da36853.0001$E03)
+da36853.0001$E04 <- factor_to_numeric(da36853.0001$E04)
+da36853.0001$E05 <- factor_to_numeric(da36853.0001$E05)
+da36853.0001$E06 <- factor_to_numeric(da36853.0001$E06)
+da36853.0001$E07 <- factor_to_numeric(da36853.0001$E07)
+da36853.0001$E08 <- factor_to_numeric(da36853.0001$E08)
+da36853.0001$E09 <- factor_to_numeric(da36853.0001$E09)
+da36853.0001$E10 <- factor_to_numeric(da36853.0001$E10)
+
+da36853.0001$F01 <- factor_to_numeric(da36853.0001$F01)
+da36853.0001$F02 <- factor_to_numeric(da36853.0001$F02)
+da36853.0001$F03 <- factor_to_numeric(da36853.0001$F03)
+da36853.0001$F04 <- factor_to_numeric(da36853.0001$F04)
+da36853.0001$F05 <- factor_to_numeric(da36853.0001$F05)
+da36853.0001$F06 <- factor_to_numeric(da36853.0001$F06)
+da36853.0001$F07 <- factor_to_numeric(da36853.0001$F07)
+da36853.0001$F08 <- factor_to_numeric(da36853.0001$F08)
+da36853.0001$F09 <- factor_to_numeric(da36853.0001$F09)
+
+da36853.0001$G01 <- factor_to_numeric(da36853.0001$G01)
+da36853.0001$G02 <- factor_to_numeric(da36853.0001$G02)
+da36853.0001$G03 <- factor_to_numeric(da36853.0001$G03)
+da36853.0001$G04 <- factor_to_numeric(da36853.0001$G04)
+da36853.0001$G05 <- factor_to_numeric(da36853.0001$G05)
+da36853.0001$G06 <- factor_to_numeric(da36853.0001$G06)
+da36853.0001$G07 <- factor_to_numeric(da36853.0001$G07)
+da36853.0001$G08 <- factor_to_numeric(da36853.0001$G08)
+
+da36853.0001$H01 <- factor_to_numeric(da36853.0001$H01)
+da36853.0001$H02 <- factor_to_numeric(da36853.0001$H02)
+da36853.0001$H03 <- factor_to_numeric(da36853.0001$H03)
+da36853.0001$H04 <- factor_to_numeric(da36853.0001$H04)
+da36853.0001$H05 <- factor_to_numeric(da36853.0001$H05)
+da36853.0001$H06 <- factor_to_numeric(da36853.0001$H06)
+da36853.0001$H07 <- factor_to_numeric(da36853.0001$H07)
+da36853.0001$H08 <- factor_to_numeric(da36853.0001$H08)
+da36853.0001$H09 <- factor_to_numeric(da36853.0001$H09)
+da36853.0001$H10 <- factor_to_numeric(da36853.0001$H10)
+da36853.0001$H11 <- factor_to_numeric(da36853.0001$H11)
+
+da36853.0001$J01 <- factor_to_numeric(da36853.0001$J01)
+da36853.0001$J02 <- factor_to_numeric(da36853.0001$J02)
+da36853.0001$J03 <- factor_to_numeric(da36853.0001$J03)
+da36853.0001$J04 <- factor_to_numeric(da36853.0001$J04)
+da36853.0001$J05 <- factor_to_numeric(da36853.0001$J05)
+da36853.0001$J06 <- factor_to_numeric(da36853.0001$J06)
+da36853.0001$J07 <- factor_to_numeric(da36853.0001$J07)
+da36853.0001$J08 <- factor_to_numeric(da36853.0001$J08)
+da36853.0001$J09 <- factor_to_numeric(da36853.0001$J09)
+da36853.0001$J10 <- factor_to_numeric(da36853.0001$J10)
+da36853.0001$J11 <- factor_to_numeric(da36853.0001$J11)
+da36853.0001$J12 <- factor_to_numeric(da36853.0001$J12)
+da36853.0001$J13 <- factor_to_numeric(da36853.0001$J13)
+da36853.0001$J14 <- factor_to_numeric(da36853.0001$J14)
+da36853.0001$J15 <- factor_to_numeric(da36853.0001$J15)
+da36853.0001$J16 <- factor_to_numeric(da36853.0001$J16)
+da36853.0001$J17 <- factor_to_numeric(da36853.0001$J17)
+da36853.0001$J18 <- factor_to_numeric(da36853.0001$J18)
+da36853.0001$J19 <- factor_to_numeric(da36853.0001$J19)
+da36853.0001$J20 <- factor_to_numeric(da36853.0001$J20)
+da36853.0001$J21 <- factor_to_numeric(da36853.0001$J21)
+da36853.0001$J22 <- factor_to_numeric(da36853.0001$J22)
+da36853.0001$J23 <- factor_to_numeric(da36853.0001$J23)
+da36853.0001$J24 <- factor_to_numeric(da36853.0001$J24)
+da36853.0001$J25 <- factor_to_numeric(da36853.0001$J25)
+da36853.0001$J26 <- factor_to_numeric(da36853.0001$J26)
+da36853.0001$J27 <- factor_to_numeric(da36853.0001$J27)
+
+da36853.0001$K01 <- factor_to_numeric(da36853.0001$K01)
+da36853.0001$K02 <- factor_to_numeric(da36853.0001$K02)
+da36853.0001$K03 <- factor_to_numeric(da36853.0001$K03)
+da36853.0001$K04 <- factor_to_numeric(da36853.0001$K04)
+da36853.0001$K05 <- factor_to_numeric(da36853.0001$K05)
+da36853.0001$K06 <- factor_to_numeric(da36853.0001$K06)
+da36853.0001$K07 <- factor_to_numeric(da36853.0001$K07)
+da36853.0001$K08 <- factor_to_numeric(da36853.0001$K08)
+da36853.0001$K09 <- factor_to_numeric(da36853.0001$K09)
+da36853.0001$K10 <- factor_to_numeric(da36853.0001$K10)
+da36853.0001$K11 <- factor_to_numeric(da36853.0001$K11)
+da36853.0001$K12 <- factor_to_numeric(da36853.0001$K12)
+da36853.0001$K13 <- factor_to_numeric(da36853.0001$K13)
+da36853.0001$K14 <- factor_to_numeric(da36853.0001$K14)
+da36853.0001$K15 <- factor_to_numeric(da36853.0001$K15)
+da36853.0001$K16 <- factor_to_numeric(da36853.0001$K16)
+da36853.0001$K17 <- factor_to_numeric(da36853.0001$K17)
+da36853.0001$K18 <- factor_to_numeric(da36853.0001$K18)
+
+da36853.0001$L01 <- factor_to_numeric(da36853.0001$L01)
+da36853.0001$L02 <- factor_to_numeric(da36853.0001$L02)
+da36853.0001$L03 <- factor_to_numeric(da36853.0001$L03)
+da36853.0001$L04 <- factor_to_numeric(da36853.0001$L04)
+da36853.0001$L05 <- factor_to_numeric(da36853.0001$L05)
+da36853.0001$L06 <- factor_to_numeric(da36853.0001$L06)
+da36853.0001$L07 <- factor_to_numeric(da36853.0001$L07)
+da36853.0001$L08 <- factor_to_numeric(da36853.0001$L08)
+
+da36853.0001$M01 <- factor_to_numeric(da36853.0001$M01)
+da36853.0001$M02 <- factor_to_numeric(da36853.0001$M02)
+da36853.0001$M03 <- factor_to_numeric(da36853.0001$M03)
+da36853.0001$M04 <- factor_to_numeric(da36853.0001$M04)
+da36853.0001$M05 <- factor_to_numeric(da36853.0001$M05)
+da36853.0001$M06 <- factor_to_numeric(da36853.0001$M06)
+da36853.0001$M07 <- factor_to_numeric(da36853.0001$M07)
+da36853.0001$M08 <- factor_to_numeric(da36853.0001$M08)
+da36853.0001$M09 <- factor_to_numeric(da36853.0001$M09)
+
+da36853.0001$N01 <- factor_to_numeric(da36853.0001$N01)
+da36853.0001$N02 <- factor_to_numeric(da36853.0001$N02)
+da36853.0001$N03 <- factor_to_numeric(da36853.0001$N03)
+da36853.0001$N04 <- factor_to_numeric(da36853.0001$N04)
+da36853.0001$N05 <- factor_to_numeric(da36853.0001$N05)
+da36853.0001$N06 <- factor_to_numeric(da36853.0001$N06)
+da36853.0001$N07 <- factor_to_numeric(da36853.0001$N07)
+da36853.0001$N08 <- factor_to_numeric(da36853.0001$N08)
+da36853.0001$N09 <- factor_to_numeric(da36853.0001$N09)
+da36853.0001$N10 <- factor_to_numeric(da36853.0001$N10)
+da36853.0001$N11 <- factor_to_numeric(da36853.0001$N11)
+
+da36853.0001$P01 <- factor_to_numeric(da36853.0001$P01)
+da36853.0001$P02 <- factor_to_numeric(da36853.0001$P02)
+da36853.0001$P03 <- factor_to_numeric(da36853.0001$P03)
+da36853.0001$P04 <- factor_to_numeric(da36853.0001$P04)
+da36853.0001$P05 <- factor_to_numeric(da36853.0001$P05)
+da36853.0001$P06 <- factor_to_numeric(da36853.0001$P06)
+da36853.0001$P07 <- factor_to_numeric(da36853.0001$P07)
+da36853.0001$P08 <- factor_to_numeric(da36853.0001$P08)
+da36853.0001$P09 <- factor_to_numeric(da36853.0001$P09)
+da36853.0001$P10 <- factor_to_numeric(da36853.0001$P10)
+da36853.0001$P11 <- factor_to_numeric(da36853.0001$P11)
+da36853.0001$P12 <- factor_to_numeric(da36853.0001$P12)
+
+da36853.0001$R01 <- factor_to_numeric(da36853.0001$R01)
+da36853.0001$R02 <- factor_to_numeric(da36853.0001$R02)
+da36853.0001$R03 <- factor_to_numeric(da36853.0001$R03)
+da36853.0001$R04 <- factor_to_numeric(da36853.0001$R04)
+da36853.0001$R05 <- factor_to_numeric(da36853.0001$R05)
+da36853.0001$R06 <- factor_to_numeric(da36853.0001$R06)
+da36853.0001$R07 <- factor_to_numeric(da36853.0001$R07)
+da36853.0001$R08 <- factor_to_numeric(da36853.0001$R08)
+da36853.0001$R09 <- factor_to_numeric(da36853.0001$R09)
+da36853.0001$R10 <- factor_to_numeric(da36853.0001$R10)
+da36853.0001$R11 <- factor_to_numeric(da36853.0001$R11)
+da36853.0001$R12 <- factor_to_numeric(da36853.0001$R12)
+da36853.0001$R13 <- factor_to_numeric(da36853.0001$R13)
+da36853.0001$R14 <- factor_to_numeric(da36853.0001$R14)
+da36853.0001$R15 <- factor_to_numeric(da36853.0001$R15)
+da36853.0001$R16 <- factor_to_numeric(da36853.0001$R16)
+da36853.0001$R17 <- factor_to_numeric(da36853.0001$R17)
+da36853.0001$R18 <- factor_to_numeric(da36853.0001$R18)
+da36853.0001$R19 <- factor_to_numeric(da36853.0001$R19)
+da36853.0001$R20 <- factor_to_numeric(da36853.0001$R20)
+da36853.0001$R21 <- factor_to_numeric(da36853.0001$R21)
+da36853.0001$R22 <- factor_to_numeric(da36853.0001$R22)
+da36853.0001$R23 <- factor_to_numeric(da36853.0001$R23)
+da36853.0001$R24 <- factor_to_numeric(da36853.0001$R24)
+```
+
+
+### 2. Examining missing values
+
+Before running the models, we first evaluated the amount of missing values to see what strategy we can best use to eliminate them and make the dataset viable for model training.
+
+First, we want to figure out which variables have over 25% missing values and delete them.
+```{r}
+colSums(is.na(da36853.0001))
+```
+
+As shown, these variables are A03 and A04 have over 25% missing values. Thus, it is best to delete them. Note that although they are unrelated to the dataset we will eventually use, they are useful for the later steps in data preprocessing. We want to also delete the CASEID (A01) and the WEIGHT variable since we are not going to use them.
+```{r}
+da36853.0001$A03 <- NULL
+da36853.0001$A04 <- NULL
+da36853.0001$CASEID <- NULL
+da36853.0001$WEIGHT <- NULL
+```
+
+### 3. Variable Deletion
+
+We want to delete variables that are very similar to avoid multicolinearity.  (e.g. A01 - did you vote? vs. A02 - which presidential candidate did you vote for?; C05 - Heard anything about campaign on television talk shows vs. C08 - Number of programs watched on tv about campaign)
+
+In terms of deciding which one of the frequency versus non-frequency similar variables to delete, we used multi-factor variables as opposed to 2-factor variables (e.g. Variables with "None," "Just one or two," "Several," "A good many." versus Variables with "Yes" or "no")  
+
+We think this is more accurate because frequency variables account for a more diverse range of answers as opposed to the binary yes or no answers.
+
+
+```{r}
+# Which candidate did you vote (A02) is similar to the did you vote question (A01)
+  # those who voted has also has a value for the A02 variable.  But those who did not vote,
+    # are assigned as missing value for the A02 variable.  
+      # Thus, if we resort to using KNN Imputation, it would be errorneous to assign A02 a             # value
+da36853.0001$A02 <- NULL
+
+# These two variables (C01 and C02) asks whether or how frequent one follows news in mass media.  This includes TV, radio, newspaper, or the internet.  However, we want to focus specifically which specific media consumption is most conducive in predicting who will vote.  There are already specific media consumption variables and thus we do not need C01 and C02.
+da36853.0001$C01 <- NULL
+da36853.0001$C02 <- NULL
+
+# Whether or not one engages in a specific media consumption is similar to the variables of 
+  # how frequent does one engages in a specific media consumption.
+da36853.0001$C03 <- NULL
+da36853.0001$C04 <- NULL
+da36853.0001$C05 <- NULL
+da36853.0001$C06 <- NULL
+da36853.0001$C07 <- NULL
+
+```
+
+### 4. KNN imputation
+As we take a closer look at the data, we also noticed that each observation has a missing value.  Hence, if we eliminate missing values by deleting each row that has a missing value, we would end up deleting a large portion of our dataset.  For this reason, we decided to use KNN imputation.
+
+This technique predicts the missing variable in one observation by inferring from variables with non-missing values within the observation. This is created by analyzing the relationship between the missing variable and non-missing variables in other observations in which the missing variable is not missing. The amount of other observations examined per missing value is also determined.
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
+library(DMwR)
+knnOutput <- knnImputation(da36853.0001)
+
+```
+Since the dataset is originally whole number values, we have to round the decimal values derived from KNN Imputation.
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
+Final_Version <- round(knnOutput, 0)
+```
+
+### 5. Examining output variable distribution
+
+To ensure a higher accuracy in the prediction, we want to make sure that the dataset is not biased in having a substantially higher proportion of one output value than the other.  We examined the proportion of each value of the output variable.
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
+ggplot(data=Final_Version)+
+  geom_bar(aes(x=as.character(A01)))
+
+table(Final_Version$A01)
+```
+The number 1 is equivalent to the number of people who voted in the dataset.  The number 2 is equivalent to the number of people who did not vote in the dataset.  As we can see, there is a substantially higher proportion of those who voted than those did not vote.  
+
+### 6. Balancing output variable distribution using Oversampling
+
+To balance the proportion of observations of people that did not vote and those that did not, we used a technique called oversampling. This increases the amount of observations of people that did not vote. Oversampling involves randomly creating copies of the observations in which people did not vote to match the number of people who did.
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
+## Oversampling: 
+library(ROSE)
+table(Final_Version$A01)
+
+# balanced data set with both over and under sampling
+data.balanced.ou <- ovun.sample(A01~., data=Final_Version,
+                                N=nrow(Final_Version), p=0.5, 
+                                seed=1, method="both")$data
+
+table(data.balanced.ou$A01)
+```
+
+### 7. Subsetting to training and testing dataset
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
+set.seed(1234)
+index <- createDataPartition(data.balanced.ou$A01, p=0.75, list=FALSE) 
+train <- data.balanced.ou[index, ]
+test <- data.balanced.ou[-index, ]
+
+```
+
+### 8. Creating Two Subsets for Analysis and Prediction
+
+We want to make a subset that is solely focuses on the variables of media consumption and voter turnout to conduct an analysis of which media consumption is most significant in getting people to vote.
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
+# Media Consumption
+
+library(dplyr)
+train %>%
+  select(A01, C08, C09, C10, C11)-> media_train
+# C08: Number of programs watched on tv about campaign
+# C09: Number of speeches listened to on radio about campaign
+# C10: Number of times got information on internet about campaign
+# C11: Number of articles read in newspaper about campaign
+
+test %>%
+  select(A01, C08, C09, C10, C11)-> media_test
+
+```
+
+We want to also make a subset that solely focuses on the variables that political campaigns can access to predict who is not likely to vote.  These variable are ubiquitous and do not pertain to a specific time (e.g. social demographic variables and political party affiliation versus what do you think  about Clinton or Trump in 2016). 
+
+```{r}
+# Prediction Model
+
+train %>% select(A01, A07, R01, R02, R03, 
+         R04, R05, R06, R07, 
+         R08, R09, R10, R11, 
+         R12, R13, R14, R15, 
+         R16, R17, R18, R19, 
+         R20, R21, R22, R23, 
+         R24)-> predict_train
+
+test %>% select(A01, A07, R01, R02, R03, 
+         R04, R05, R06, R07, 
+         R08, R09, R10, R11, 
+         R12, R13, R14, R15, 
+         R16, R17, R18, R19, 
+         R20, R21, R22, R23, 
+         R24)-> predict_test
+```
+
+## Machine Learning Approach
+
+### 2. Random Forest
+
+To predict the amount of voters that would not vote as a result of demographic factors (problem 2), we used a Random Forest model. The Random Forest model is especially suited to classification problems, and as we are trying to predict whether someone would vote, this model is relevant.
+
+Random Forest first bootstraps the original dataset and uses this new bootstrapped dataset to train the model. Bootstrapping is a sampling process that creates a dataset by randomly taking observations from the original dataset, the catch is that the same observation may appear more than once in the bootstrapped dataset. Note the size of the bootstrapped dataset is the same as that of the original, so some entries are excluded. The reason why this is done is so that the model can be used to classify datasets that are not used to train the model, creating a sort of pseudo-testing dataset.The amount of excluded observations that were correctly predicted is what is used to evaluate the accuracy of the model.
+
+To understand Random Forest, we must first understand decision trees, as this approached is reliant on building decision trees. A decision tree represents a splitting of the outcome based on multiple predictor variables. For example if people less than 30 years of age are not likely to vote, then there is a split of the outcome of voting based on age, specifically between those younger and older than 30. A different variable is then used to split to each of the split groups, based on how much they split the outcome of those in each group. This different variable may be different for each group. This process continues until there is no longer a clear split between outcomes, forming a decision tree. It is worth noting that more than one variable may be added for each split. However, in this case, each split is based on one variable.
+
+The Random Forest approach in short randomly creates decision trees based on the bootstrapped dataset and predicts the outcome based on the aggregate predictions of all of these trees. Each decision tree is built by randomly choosing variables from the dataset and building a random decision tree by adding more randomly chosen variables, in this way creating a subset of variables. The dataset is then ran through all of these trees and the model classifies an observation based on the outcome chosen by more of the trees.
+
+## Results
+
+### 1. Logistic Regression model (media consumption and its impact on voting outcome)
+
+```{r}
+media_train$A01 <- as.factor(ifelse(media_train$A01==1, "yes", "no"))
+media_test$A01 <- as.factor(ifelse(media_test$A01==1, "yes", "no"))
+
+fit.lr <- glm(A01 ~., data=media_train, family=binomial)
+summary(fit.lr)
+```
+
+The variable C08 (Number of programs watched on tv about campaign) has the highest coefficient value compare to the other variables.  It is also significant (p<0.05).
+
+### 2. Random Forest (Predicting who will not vote based on demographics)
+
+```{r}
+
+predict_train$A01 <- as.factor(ifelse(predict_train$A01==1, "yes", "no"))
+predict_test$A01 <- as.factor(ifelse(predict_test$A01==1, "yes", "no"))
+
+library(randomForest)
+set.seed(1234)
+fit.forest <- randomForest(A01 ~ ., data=predict_train, 
+                           na.action=na.roughfix,
+                           ntree=100,
+                           importance=TRUE)
+
+fit.forest
+
+pred <- predict(fit.forest, predict_test)
+```
+
+The following shows the demographic variables in order of importance in predicting voting outcome:
+
+```{r}
+varImpPlot(fit.forest, type=2, main="Variable Importance")
+```
+
+Now we will examine how well the model performed:
+
+```{r}
+confusionMatrix(pred, predict_test$A01, positive="no")
+```
+
+Note that we used not voting (denoted by the outcome "no") as the positive outcome, as we are trying to find out who will not vote.
+
+We found that we were able to correctly predict the voting outcome of 91.23% of voters. The sensitivity of the model is 92.16%, meaning that it was able to correctly predict the outcome "no" for 92.16% of the voters that did not vote. The specificity of the model is 90.23%, meaning it was able to correctly predict the outcome "yes" for 90.23% of the voters that did vote. 
+
+## Discussion
+
+### 1. Findings
+
+We will first answer problem 1 on the effects of media consumption on voter outcomes. Based on the Logistic Regression model, we found different media strategies contributed to a higher voting outcome. Below are the results of the logistic regression model:
+
+```{r, echo=FALSE}
+exp(coef(fit.lr))
+```
+
+e to the power of the C08 variable coefficient is 1.416. This means that 1 increase in C08 would be 41.6% increase in the odds of in voting "yes" (A01) while holding all other variables constant.  Hence, the implication of this is that political campaigns should focus more using TV programs to advertise for their campaigns in order to convince more people to vote for them.
+
+
+Second, we will address the results from the Random Forest model in addressing the second problem.As mentioned in the results section, the following shows the demographic variables that contribute the most to voting outcome.
+
+```{r, echo=FALSE}
+varImpPlot(fit.forest, type=2, main="Variable Importance")
+```
+
+In this model, the 4 most important variables are, in order of importance, level of education, party identification, age, and family income.
+
+Based on the accuracy, sensitivity and specificity of the model as shown in the results section, we can conclude that we have solved problem 2 as we have created a sufficiently accurate model. Further, we have also narrowed the most relevant demographic variables that influence voting outcome.
+
+### 2. Implications and Further Research
+
+The implications of our solution to problem 2 is that political campaigners should focus on appealing to those of different levels education, all party identification, all age populations, and those from all income brackets. Another interpretation is that individuals with certain levels of such traits have less opportunity to vote, and the government should work on avenues that would enable more people from such demographics to vote. However, the exact correlation (positive or negative) between these predictors and the outcome are yet to be determined. Further research should be done into these correlations.
+
+Our suggestions for those looking to answer the same problems we are would be to work with a dataset with a lower number of missing values, as we had to impute the missing values, thus leaving room for error. Increasing the size of the dataset would be beneficial as well, as it would be more representative of the US population. This would also balance the distribution of outcome variables. Another improvement for balancing the distribution of outcome variables, cross-validation prior to oversampling may reduce overfitting. Considering our high accuracy, this might be an issue. Another option for balancing the output variables is SMOTE.
+
+## References
+
+Dealing with imbalanced data: undersampling, oversampling and proper cross-validation. (n.d.). Retrieved from https://www.marcoaltini.com/blog/dealing-with-imbalanced-data-undersampling-oversampling-and-proper-cross-validation.
+
+DMwR. (n.d.). Retrieved from https://www.rdocumentation.org/packages/DMwR/versions/0.4.1/topics/knnImputation.
+
+Yiu, T. (2019, August 14). Understanding Random Forest. Retrieved from https://towardsdatascience.com/understanding-random-forest-58381e0602d2.
